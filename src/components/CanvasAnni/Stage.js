@@ -1,6 +1,12 @@
 let STAGE_W = 500;
 let STAGE_H = 300;
 
+let _onFrame, _cancelFrame;
+if (typeof window !== 'undefined') {
+  _onFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame || window.oRequestAnimationFrame;
+
+  _cancelFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+}
 
 class Stage {
   constructor (opts) {
@@ -11,10 +17,12 @@ class Stage {
     this.showFPS = opts.fps;
     this.backgroundColor = opts.backgroundColor || '#fff';
     this.update = opts.update;
-    this.oldTimeStamp = 0;
-    this.timeStart = 0;
-    this.timePassed = 0;
+    this.disableClearCtx = opts.disableClearCtx === undefined ? false : opts.disableClearCtx;
+    console.log('disableClearCtx', this.disableClearCtx, opts);
     this.initCtx();
+    if (opts.autoStart) {
+      this.start();
+    }
   }
 
   initCtx () {
@@ -31,30 +39,27 @@ class Stage {
   }
 
   start () {
-    if (this.anniReq) {
-      window.cancelAnimationFrame(this.anniReq);
-    }
+    this.ctx.clearRect(0, 0, this.stageW, this.stageH);
     this.oldTimeStamp = 0;
-    this.timeStart = 0;
+    this.timeStart = -1;
     this.timePassed = 0;
-    this.anniReq = window.requestAnimationFrame((timeStamp) => this.loop(timeStamp));
+    this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
   }
 
   loop (timeStamp) {
-    if (this.timeStart === 0) {
-      this.timeStart = timeStamp;
-      this.anniReq = window.requestAnimationFrame((timeStamp) => this.loop(timeStamp));
-      return;
+    if (this.timeStart === -1) {
+      this.cancelFrame(this.anniReq);
+      this.timeStart = timeStamp - 1;
     }
-    let secondsPerFrame = (timeStamp - this.timeStart - this.oldTimeStamp) / 1000;
-    this.oldTimeStamp = timeStamp - this.timeStart;
-    this.timePassed += secondsPerFrame;
-    console.log('loop', timeStamp, this.timeStart, this.oldTimeStamp, secondsPerFrame);
 
+    let secondsPerFrame = (timeStamp - this.timeStart) / 1000;
     let fps = Math.round(1 / secondsPerFrame);
-    this.ctx.clearRect(0, 0, this.stageW, this.stageH);
 
-    // console.log(this.timePassed, timeStamp, this.secondsPerFrame);
+    this.timePassed += secondsPerFrame;
+    this.timeStart = timeStamp;
+    if (!this.disableClearCtx) {
+      this.ctx.clearRect(0, 0, this.stageW, this.stageH);
+    }
     this.update(this.timePassed, secondsPerFrame);
 
     if (this.showFPS) {
@@ -63,7 +68,15 @@ class Stage {
       this.ctx.fillText("FPS: " + fps, 10, 30);
     }
 
-    this.anniReq = window.requestAnimationFrame((timeStamp) => this.loop(timeStamp));
+    this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+  }
+
+  onFrame (func) {
+    return _onFrame(func)
+  }
+
+  cancelFrame (frame) {
+    return _cancelFrame(frame)
   }
 }
 
