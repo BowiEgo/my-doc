@@ -1,5 +1,5 @@
+/* eslint-disable */
 // time, begin, change, duration
-
 // Linear motion
 function easeLinear (t, b, c, d) {
   return c * t / d + b;
@@ -7,6 +7,7 @@ function easeLinear (t, b, c, d) {
 
 // Quadratic easing in
 function easeInQuad (t, b, c, d) {
+  let x = c * (t /= d) * t;
   return c * (t /= d) * t + b;
 }
 
@@ -119,7 +120,6 @@ function easeInOutQuint (t, b, c, d) {
 }
 
 function easeInBounce (x, t, b, c, d) {
-  console.log('easeInBounce', x, t, b, c, d);
   return c - easeOutBounce(x, d - t, 0, c, d) + b;
 }
 
@@ -139,6 +139,56 @@ function easeInOutBounce (x, t, b, c, d) {
   if (t < d / 2) return easeInBounce(x, t * 2, 0, c, d) * .5 + b;
   return easeOutBounce(x, t * 2 - d, 0, c, d) * .5 + c * .5 + b;
 }
+
+function easeInElastic (x, t, b, c, d) {
+  let s = 1.70158;
+  let p = 0;
+  let a = c;
+  if (t == 0) return b;
+  if ((t /= d) == 1) return b + c;
+  if (!p) p = d * .3;
+  if (a < Math.abs(c)) {
+    a = c;
+    s = p / 4;
+  } else {
+    s = p / (2 * Math.PI) * Math.asin(c / a);
+  }
+  return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+}
+
+function easeOutElastic (x, t, b, c, d) {
+  let s = 1.70158;
+  let p = 0;
+  let a = c;
+  if (t == 0) return b;
+  if ((t /= d) == 1) return b + c;
+  if (!p) p = d * .3;
+  if (a < Math.abs(c)) {
+    a = c;
+    s = p / 4;
+  } else {
+    s = p / (2 * Math.PI) * Math.asin(c / a);
+  }
+  return a * Math.pow(2, -10 * t) * Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
+}
+
+function easeInOutElastic (x, t, b, c, d) {
+  let s = 1.70158;
+  let p = 0;
+  let a = c;
+  if (t == 0) return b;
+  if ((t /= d / 2) == 2) return b + c;
+  if (!p) p = d * (.3 * 1.5);
+  if (a < Math.abs(c)) {
+    a = c;
+    s = p / 4;
+  } else {
+    s = p / (2 * Math.PI) * Math.asin(c / a);
+  }
+  if (t < 1) return -.5 * (a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+  return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - s) * (2 * Math.PI) / p) * .5 + c + b;
+}
+
 
 export default {
   easeLinear,
@@ -165,6 +215,8 @@ export default {
   easeInOutQuint,
   easeInBounce,
   easeOutBounce,
-  easeInOutBounce
+  easeInOutBounce,
+  easeInElastic,
+  easeOutElastic,
+  easeInOutElastic
 }
-

@@ -28,8 +28,30 @@
         <input type="text" v-model="yBegin">
         <input type="text" v-model="yChange">
       </div>
+      <div class="ease-select" v-if="motionType === 'ease'">
+        <div class="tag">W</div>
+        <select v-model="easeTrendW">
+          <option :value="item" v-for="(item, index) in easeTrends" :key="index">{{ item }}</option>
+        </select>
+        <select v-model="easeTypeW">
+          <option :value="item" v-for="(item, index) in easeTypes" :key="index">{{ item }}</option>
+        </select>
+        <input type="text" v-model="wBegin">
+        <input type="text" v-model="wChange">
+      </div>
+      <div class="ease-select" v-if="motionType === 'ease'">
+        <div class="tag">H</div>
+        <select v-model="easeTrendH">
+          <option :value="item" v-for="(item, index) in easeTrends" :key="index">{{ item }}</option>
+        </select>
+        <select v-model="easeTypeH">
+          <option :value="item" v-for="(item, index) in easeTypes" :key="index">{{ item }}</option>
+        </select>
+        <input type="text" v-model="hBegin">
+        <input type="text" v-model="hChange">
+      </div>
       <input type="text" v-model="duration" v-if="motionType === 'ease'">
-      <button @click="startAnni">start</button>
+      <button @click="startAni">start</button>
     </div>
   </div>
 </template>
@@ -39,7 +61,7 @@ import Stage from './Stage';
 import Ease from './ease';
 
 export default {
-  name: 'CanvasAnni',
+  name: 'CanvasAni',
 
   data () {
     return {
@@ -53,8 +75,12 @@ export default {
       timePassed: 0,
       easeTypeX: 'Quad',
       easeTypeY: 'Quad',
+      easeTypeW: 'Quad',
+      easeTypeH: 'Quad',
       easeTrendX: 'In',
       easeTrendY: 'In',
+      easeTrendW: 'In',
+      easeTrendH: 'In',
       easeTypes: [
         'Quad',
         'Sine',
@@ -64,6 +90,7 @@ export default {
         'Quart',
         'Quint',
         'Bounce',
+        'Elastic'
       ],
       easeTrends: [
         'In',
@@ -72,8 +99,12 @@ export default {
       ],
       xBegin: 0,
       yBegin: 0,
+      wBegin: 150,
+      hBegin: 100,
       xChange: 500,
       yChange: 300,
+      wChange: 0,
+      hChange: 0,
       duration: 2
     }
   },
@@ -102,6 +133,10 @@ export default {
     loop: {
       type: Boolean,
       default: true
+    },
+    log: {
+      type: Boolean,
+      default: false
     }
   },
 
@@ -122,7 +157,7 @@ export default {
   },
 
   methods: {
-    startAnni () {
+    startAni () {
       this.rectX = this.xBegin;
       this.rectY = this.yBegin;
       this.stage.start();
@@ -135,14 +170,14 @@ export default {
       if (this.motionType !== 'ease') {
         if (this.rectX > this.stageW || this.rectY > this.stageH) {
           if (this.loop) {
-            this.startAnni();
+            this.startAni();
             return
           }
         }
       } else {
-        if (timePassed > this.duration) {
+        if (timePassed > this.duration + 1) {
           if (this.loop) {
-            this.startAnni();
+            this.startAni();
             return
           }
         }
@@ -169,25 +204,40 @@ export default {
       // ease
       let easeFuncX = `ease${this.easeTrendX}${this.easeTypeX}`;
       let easeFuncY = `ease${this.easeTrendY}${this.easeTypeY}`;
-      let paramsX = [timePassed, this.xBegin, this.xChange, this.duration];
-      let paramsY = [timePassed, this.yBegin, this.yChange, this.duration];
-      if (this.easeTypeX === 'Bounce') {
+      let easeFuncW = `ease${this.easeTrendW}${this.easeTypeW}`;
+      let easeFuncH = `ease${this.easeTrendH}${this.easeTypeH}`;
+      let paramsX = [timePassed, Number(this.xBegin), Number(this.xChange), this.duration];
+      let paramsY = [timePassed, Number(this.yBegin), Number(this.yChange), this.duration];
+      let paramsW = [timePassed, Number(this.wBegin), Number(this.wChange), this.duration];
+      let paramsH = [timePassed, Number(this.hBegin), Number(this.hChange), this.duration];
+      if (this.easeTypeX === 'Bounce' || this.easeTypeX === 'Elastic') {
         paramsX.unshift(1);
       }
-      if (this.easeTypeY === 'Bounce') {
+      if (this.easeTypeY === 'Bounce' || this.easeTypeY === 'Elastic') {
         paramsY.unshift(1);
+      }
+      if (this.easeTypeW === 'Bounce' || this.easeTypeW === 'Elastic') {
+        paramsW.unshift(1);
+      }
+      if (this.easeTypeH === 'Bounce' || this.easeTypeH === 'Elastic') {
+        paramsH.unshift(1);
       }
       this.rectX = Ease[easeFuncX].apply(null, paramsX);
       this.rectY = Ease[easeFuncY].apply(null, paramsY);
+      this.rectW = Ease[easeFuncW].apply(null, paramsW);
+      this.rectH = Ease[easeFuncH].apply(null, paramsH);
 
-      this.drawRect(this.rectX, this.rectY);
+      this.drawRect(this.rectX, this.rectY, this.rectW, this.rectH);
     },
 
-    drawRect (rectX, rectY) {
+    drawRect (rectX, rectY, rectW = 150, rectH = 100) {
       const { ctx } = this.stage;
+      if (this.log) {
+        console.log('drawRect', rectX, rectY, rectW, rectH)
+      }
 
       ctx.fillStyle = '#ff8080';
-      ctx.fillRect(rectX, rectY, 150, 100);
+      ctx.fillRect(rectX, rectY, rectW, rectH);
     }
   }
 }
@@ -201,13 +251,12 @@ export default {
 
 .brief
   position absolute
-  // width 220px
-  top 40px
+  top -10px
   left 560px
+  p
+    line-height 10px
+    padding 0
 
-p
-  line-height 16px
-  padding 0
 
 button
   margin 10px 0

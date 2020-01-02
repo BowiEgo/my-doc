@@ -18,7 +18,6 @@ class Stage {
     this.backgroundColor = opts.backgroundColor || '#fff';
     this.update = opts.update;
     this.disableClearCtx = opts.disableClearCtx === undefined ? false : opts.disableClearCtx;
-    console.log('disableClearCtx', this.disableClearCtx, opts);
     this.initCtx();
     if (opts.autoStart) {
       this.start();
@@ -40,15 +39,14 @@ class Stage {
 
   start () {
     this.ctx.clearRect(0, 0, this.stageW, this.stageH);
-    this.oldTimeStamp = 0;
     this.timeStart = -1;
     this.timePassed = 0;
-    this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+    this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
   }
 
   loop (timeStamp) {
     if (this.timeStart === -1) {
-      this.cancelFrame(this.anniReq);
+      this.cancelFrame(this.aniReq);
       this.timeStart = timeStamp - 1;
     }
 
@@ -68,7 +66,7 @@ class Stage {
       this.ctx.fillText("FPS: " + fps, 10, 30);
     }
 
-    this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+    this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
   }
 
   onFrame (func) {

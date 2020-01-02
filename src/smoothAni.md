@@ -26,7 +26,7 @@ class Stage {
     this.ctx = this.canvasEl.getContext('2d');
     this.ctx.scale(this.scale, this.scale);
   }
-」
+}
 ```
 
 ### 在画布上动态绘制物体
@@ -61,7 +61,7 @@ class Stage {
   ...
   loop (timeStamp) {
     this.update();
-    this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+    this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
   }
 
   onFrame (func) {
@@ -76,7 +76,7 @@ class Stage {
 
 创建一个vue组件来使用刚定义的Stage。属性update传入一个更新和绘制的函数用来给Stage的loop()调用。
 ``` javascript
-// SmoothAnni.vue
+// Smoothani.vue
 let rectX = 0;
 let rectY = 0;
 
@@ -100,11 +100,11 @@ methods: {
 ### 何时更新物体的状态（位置）
 update()方法是一个最简单的更新这个方块状态的方法，动画每一帧都会在loop()中触发update()，然后给方块的在画布中的坐标值加1。所以确保在draw()之前更新物体状态，就能持续在Canvas画布上绘制最新状态的物体。如下图：
 
-图图图图图图
+<image-card :source="'/images/smooth-ani-01.png'" :width=600></image-card>
 
 ### 物体残影
 我们本该期望看到一个物体以一条直线的轨迹从画布左上角移动到右下角，可是接下来看到是这样的：
-<canvas-anni :motion-type="'linear'" :auto-start=true :show-brief=false :clearCtx=false :show-fps=false :loop=false></canvas-anni>
+<canvas-ani :motion-type="'linear'" :auto-start=true :show-brief=false :clearCtx=false :show-fps=false :loop=false></canvas-ani>
 什么鬼？看起来像是出现了无数个方块，所以形成了一条残影形成的轨迹。原因很简单，我们不断绘制方块，而没有擦除上一帧的方块。
 
 ### 绘制前清空画布
@@ -121,10 +121,10 @@ class Stage {
 ```
 clearRect()是Canvas 2D API 设置指定矩形区域内（以 点 (x, y) 为起点，范围是(width, height) ）所有像素变成透明，并擦除之前绘制的所有内容的方法。
 
-图图图图图图
+<image-card :source="'/images/smooth-ani-02.png'" :width=600></image-card>
 
 当我们再次运行，看起来就正常了。
-<canvas-anni :motion-type="'linear'" :auto-start=true :show-brief=false :show-fps=false :loop=false></canvas-anni>
+<canvas-ani :motion-type="'linear'" :auto-start=true :show-brief=false :show-fps=false :loop=false></canvas-ani>
 
 ### 计算动画的帧率
 现在我们这个看起来很简单的动画已经可以很顺滑的运行在不同的设备。但如果我们的动画很多而且变得复杂起来，我们的设备可能会处理不过来然后造成拖慢和延迟，然后当性能恢复的时候速度又变的快了起来。这肯定不是我们想要的结果，所以如果我们想要让物体保持一个稳定的速度运动，不受当前设备的性能造成帧率的变化影响。那么该怎么做呢。
@@ -147,11 +147,11 @@ loop (timeStamp) {
     this.ctx.fillText("FPS: " + fps, 10, 30);
   }
 
-  this.anniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+  this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
 }
 ```
 运行代码看一下效果：
-<canvas-anni :motion-type="'linear'" :auto-start=true :show-brief=false :showFps=true :loop=false></canvas-anni>
+<canvas-ani :motion-type="'linear'" :auto-start=true :show-brief=false :showFps=true :loop=false></canvas-ani>
 看起来我们的动画一般维持在60fps（frames per second)的帧率上，当我们切换浏览器标签页、打开控制台等操作的时候，可以明显看到这个数字抖动，因为这时候浏览器为了节省性能会减少requestAnimationFrame回调函数的触发。
 
 ### 维持物体运动速度
@@ -166,7 +166,7 @@ loop (timeStamp) {
   ...
 }
 
-// SmoothAnni.vue
+// Smoothani.vue
 const MOVING_SPEED = 50;
 
 this.stage = new Stage({
@@ -186,7 +186,7 @@ methods: {
   }
 }
 ```
-<canvas-anni :motion-type="'linearWithSpeed'" :auto-start=true :show-brief=true :show-fps=true></canvas-anni>
+<canvas-ani :motion-type="'linearWithSpeed'" :auto-start=true :show-brief=true :show-fps=true :loop=false></canvas-ani>
 
 当我们当动画运行在60fps,也就是每绘制一帧间隔基本在0.0167 s，这也就意味着，如果你想让物体每秒移动50 pixels，你需要将50乘以与上一帧间隔当秒数，60fps下也就是物体将会每秒移动0.845 pixels，也就是update()所做的处理。
 
@@ -194,19 +194,66 @@ methods: {
 
 ### 给动画加上缓动
 
-现在当我们把时间time当作因子，还可以做更有趣一点的事。
-首先来看一下ease function（缓动函数）。最常见的缓动是css中的transition-timing-function属性：
+#### 计算动画经过时间
+如果将timePassed(经过时间)与secondsPerFrame(每单一帧经过时间)累加，那么我们可以得到动画当前经过的时间。
 
-``` css
-div {
-  transition-timing-function: linear | ease | ease-in | ease-out | ease-in-out | cubic-bezier(n, n, n, n);
+``` javascript
+// Stage.js
+let timePassed = 0;
+
+loop (timeStamp) {
+  let secondsPerFrame = (timeStamp - oldTimeStamp) / 1000;
+  let fps = Math.round(1 / secondsPerFrame);
+
+  timePassed += secondsPerFrame;
+  oldTimeStamp = timeStamp;
+
+  this.update(this.timePassed, secondsPerFrame);
+
+  this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+}
+```
+如果我们想让动画重新开始，就会遇到一个问题。
+因为timeStamp是一个从[time origin](http://developr.mozilla.org)之后到当前调用经过的时间，它的变化并不会因为window.cancelAnimationFrame。那么如果仅仅重置oldTimeStamp，我们得到的secondsPerFrame会不准确。如果不重置那么在重新开始的时候又无法取消当前帧的回调，会使得之前的回调继续持续触发。我们改良一下代码：
+
+``` javascript
+// Stage.js
+
+start () {
+  this.ctx.clearRect(0, 0, this.stageW, this.stageH);
+  this.timeStart = -1;
+  this.timePassed = 0;
+  this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
+}
+
+loop (timeStamp) {
+  if (this.timeStart === -1) {
+    this.cancelFrame(this.aniReq);
+    this.timeStart = timeStamp - 1;
+  }
+
+  let secondsPerFrame = (timeStamp - this.timeStart) / 1000;
+  let fps = Math.round(1 / secondsPerFrame);
+
+  this.timePassed += secondsPerFrame;
+  this.timeStart = timeStamp;
+  if (!this.disableClearCtx) {
+    this.ctx.clearRect(0, 0, this.stageW, this.stageH);
+  }
+  this.update(this.timePassed, secondsPerFrame);
+
+  if (this.showFPS) {
+    this.ctx.font = '25px Arial';
+    this.ctx.fillStyle = 'black';
+    this.ctx.fillText("FPS: " + fps, 10, 30);
+  }
+
+  this.aniReq = this.onFrame((timeStamp) => this.loop(timeStamp));
 }
 ```
 
-图图图图
-
 #### 缓动函数
-对于所有的缓动函数，都需要传入四个参数，分别代表t = time (当前时间), b = beginning value (初始值), c = change in value (变化值), d = duration (总时间)。时间可以是帧数，秒数或者毫秒数。
+现在我们把时间timePassed当作因子，就可以做更有趣一点的事。对于所有的缓动函数，都需要传入四个参数，分别代表t = time (当前时间), b = beginning value (初始值), c = change in value (变化值), d = duration (总时间)。时间可以是帧数，秒数或者毫秒数。
 接下来看一个简单的线性缓动函数：
 ``` javascript
 function easeLinear (t, b, c, d) {
@@ -338,10 +385,8 @@ function easeInOutQuint (t, b, c, d) {
 }
 
 ```
-其他缓动函数：
-·弹簧动画：输出由bounciness(弹力)、speed(速度)、friction(摩擦)、mass(质量)、time(持续时间)几个参数决定。
-·阻尼动画动画：输出由bdecelerations(衰减系数)、time(持续时间)等参数决定。
+[缓动效果](https://easings.net/)
 
-<canvas-anni :motion-type="'ease'" :auto-start=true :show-brief=true :show-fps=true></canvas-anni>
+<canvas-ani :motion-type="'ease'" :auto-start=true :show-brief=true :show-fps=true :log=false></canvas-ani>
 
 

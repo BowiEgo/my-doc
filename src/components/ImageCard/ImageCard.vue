@@ -1,6 +1,6 @@
 <template>
   <div class="image-card">
-    <img :src="source" alt="">
+    <img :src="imgSource" alt="" :style="`width: ${width}px;`">
   </div>
 </template>
 
@@ -9,9 +9,23 @@ export default {
   name: 'ImageCard',
 
   props: {
+    width: {
+      type: Number,
+      default: 300
+    },
+    height: {
+      type: Number,
+      default: 200
+    },
     source: {
       type: String,
       default: ''
+    }
+  },
+
+  computed: {
+    imgSource () {
+      return process.env.NODE_ENV === 'development' ? this.source : '/dist' + this.source
     }
   }
 }
